@@ -156,3 +156,4 @@ C:\Users\pc\Downloads\StudyPlatformAPI\StudyPlatformAPI\obj\Debug\net9.0\StudyPl
 C:\Users\pc\Downloads\StudyPlatformAPI\StudyPlatformAPI\obj\Debug\net9.0\ref\StudyPlatformAPI.dll
 C:\Users\pc\Downloads\StudyPlatformAPI\StudyPlatformAPI\bin\Debug\net9.0\BCrypt-Net-Next.dll
 C:\Users\pc\Downloads\StudyPlatformAPI\StudyPlatformAPI\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\Users\pc\Downloads\StudyPlatformAPI\StudyPlatformAPI\obj\Debug\net9.0\StudyPlatformAPI.sourcelink.json

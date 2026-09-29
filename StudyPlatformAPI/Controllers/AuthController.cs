@@ -7,6 +7,7 @@ using StudyPlatformAPI.Data;
 using StudyPlatformAPI.DTOs;
 using StudyPlatformAPI.Entities;
 using StudyPlatformAPI.Services;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -31,7 +32,7 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto request)
     {
-        var userExists = _context.Users.Any(u => u.Email == request.Email);
+        var userExists = await _context.Users.AnyAsync(u => u.Email == request.Email);
         if (userExists)
         {
             return BadRequest("Bu e-posta adresi zaten kullanılıyor.");
@@ -50,22 +51,22 @@ public class AuthController : ControllerBase
             RoleId = 1,
             IsEmailVerified = false,
             VerificationCode = verificationCode,
-            VerificationCodeExpiresAt = DateTime.UtcNow.AddMinutes(15) 
+            VerificationCodeExpiresAt = DateTime.UtcNow.AddMinutes(15)
         };
 
         _context.Users.Add(newUser);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
-        string mailBody = $"<p>Study Platform'a hoş geldiniz!</p><p>Hesabınızı doğrulamak için kodunuz: <strong>{verificationCode}</strong></p><p>Bu kod 15 dakika geçerlidir.</p>";
-        await _emailService.SendEmailAsync(newUser.Email, "Study Platform - Hesap Doğrulama", mailBody);
+        string mailBody = $"Study Platform'a hos geldiniz! Hesabinizi dogrulamak icin kodunuz: {verificationCode} (Bu kod 15 dakika gecerlidir.)";
+        await _emailService.SendEmailAsync(newUser.Email, "Study Platform - Hesap Dogrulama", mailBody);
 
         return Ok("Hesap oluşturuldu. Aktifleştirmek için e-postanıza gelen kodu girin.");
     }
 
     [HttpPost("verify-email")]
-    public IActionResult VerifyEmail([FromBody] VerifyEmailDto request)
+    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto request)
     {
-        var user = _context.Users.FirstOrDefault(u => u.Email == request.Email);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
 
         if (user == null)
         {
@@ -87,21 +88,19 @@ public class AuthController : ControllerBase
             return BadRequest("Doğrulama kodunun süresi dolmuş. Lütfen yeni kod isteyin.");
         }
 
-      
         user.IsEmailVerified = true;
-        user.VerificationCode = null; 
+        user.VerificationCode = null;
         user.VerificationCodeExpiresAt = null;
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         return Ok("Hesabınız başarıyla doğrulandı. Artık giriş yapabilirsiniz.");
     }
+
     [HttpPost("login")]
-    public IActionResult Login([FromBody] LoginDto request)
+    public async Task<IActionResult> Login([FromBody] LoginDto request)
     {
-     
-        
-        var user = _context.Users.FirstOrDefault(u => u.Email == request.Email);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
 
         if (user == null)
         {
@@ -132,7 +131,7 @@ public class AuthController : ControllerBase
     [HttpPost("resend-verification")]
     public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationDto request)
     {
-        var user = _context.Users.FirstOrDefault(u => u.Email == request.Email);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
 
         if (user == null)
         {
@@ -150,14 +149,9 @@ public class AuthController : ControllerBase
         user.VerificationCode = verificationCode;
         user.VerificationCodeExpiresAt = DateTime.UtcNow.AddMinutes(15);
 
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
-        string emailBody = $@"
-        <h2>Study Platform</h2>
-        <p>Yeni doğrulama kodunuz:</p>
-        <h1>{verificationCode}</h1>
-        <p>Bu kod 15 dakika boyunca geçerlidir.</p>
-    ";
+        string emailBody = $"Study Platform - Yeni dogrulama kodunuz: {verificationCode} (Bu kod 15 dakika boyunca gecerlidir.)";
 
         await _emailService.SendEmailAsync(
             user.Email,
@@ -168,11 +162,64 @@ public class AuthController : ControllerBase
         return Ok("Yeni doğrulama kodu e-posta adresinize gönderildi.");
     }
 
-    [Authorize] 
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto request)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+        if (user == null)
+        {
+            return NotFound("Bu e-posta adresine ait kayıtlı bir kullanıcı bulunamadı.");
+        }
+
+        var random = new Random();
+        var resetCode = random.Next(100000, 999999).ToString();
+
+        user.PasswordResetCode = resetCode;
+        user.PasswordResetCodeExpiration = DateTime.UtcNow.AddMinutes(15);
+        await _context.SaveChangesAsync();
+
+        var subject = "Şifre Sıfırlama Kodu";
+        var body = $"Sifrenizi sifirlamak icin onay kodunuz: {resetCode}";
+        await _emailService.SendEmailAsync(user.Email, subject, body);
+
+        return Ok("Şifre sıfırlama kodu e-posta adresinize gönderildi.");
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto request)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+        if (user == null)
+        {
+            return NotFound("Kullanıcı bulunamadı.");
+        }
+
+        if (user.PasswordResetCode != request.Code)
+        {
+            return BadRequest("Girdiğiniz onay kodu hatalı.");
+        }
+
+        if (user.PasswordResetCodeExpiration < DateTime.UtcNow)
+        {
+            return BadRequest("Bu kodun süresi dolmuş. Lütfen yeni bir kod talep edin.");
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+        user.PasswordResetCode = null;
+        user.PasswordResetCodeExpiration = null;
+
+        await _context.SaveChangesAsync();
+
+        return Ok("Şifreniz başarıyla güncellendi. Yeni şifrenizle giriş yapabilirsiniz.");
+    }
+
+    [Authorize]
     [HttpGet("profile")]
     public IActionResult GetProfile()
     {
-        // Gelen Token'ın içindeki çantasından (Claims) bilgileri okuyoruz
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var username = User.FindFirst(ClaimTypes.Name)?.Value;
         var role = User.FindFirst(ClaimTypes.Role)?.Value;
@@ -188,11 +235,11 @@ public class AuthController : ControllerBase
 
     private string CreateToken(User user)
     {
-        var claims = new List<Claim>
+        var claims = new List<Claim>();
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username), 
-            new Claim(ClaimTypes.Role, user.RoleId.ToString()) 
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString());
+            new Claim(ClaimTypes.Name, user.Username);
+            new Claim(ClaimTypes.Role, user.RoleId.ToString());
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(

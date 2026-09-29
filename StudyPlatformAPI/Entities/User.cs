@@ -20,4 +20,7 @@ public class User
     public bool IsEmailVerified { get; set; } = false;
     public string? VerificationCode { get; set; }
     public DateTime? VerificationCodeExpiresAt { get; set; }
+
+    public string? PasswordResetCode { get; set; }
+    public DateTime? PasswordResetCodeExpiration { get; set; }
 }
