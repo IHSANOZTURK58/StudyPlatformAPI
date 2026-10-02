@@ -6,6 +6,7 @@ using Microsoft.OpenApi.Models;
 using StudyPlatformAPI.Data;
 using StudyPlatformAPI.Services;
 using System.Text;
+using StudyPlatformAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,9 +32,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddScoped<IPomodoroService, PomodoroService>();
 
 builder.Services.AddSwaggerGen(c =>
 {

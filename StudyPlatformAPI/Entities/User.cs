@@ -23,4 +23,11 @@ public class User
 
     public string? PasswordResetCode { get; set; }
     public DateTime? PasswordResetCodeExpiration { get; set; }
+
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
+
+    public string FriendCode { get; set; } = Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
+    public bool IsProfilePublic { get; set; } = true;
+    public string? Bio { get; set; } // Profilde isim altında görünecek ufak hedef yazısı
 }

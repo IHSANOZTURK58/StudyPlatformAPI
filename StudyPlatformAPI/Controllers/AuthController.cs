@@ -7,10 +7,13 @@ using StudyPlatformAPI.Data;
 using StudyPlatformAPI.DTOs;
 using StudyPlatformAPI.Entities;
 using StudyPlatformAPI.Services;
+using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography; // DÜZELTME: Güvenli rastgele sayı üretimi için eklendi
 using System.Text;
+using System.Threading.Tasks;
 
 namespace StudyPlatformAPI.Controllers;
 
@@ -40,8 +43,8 @@ public class AuthController : ControllerBase
 
         string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-        var random = new Random();
-        string verificationCode = random.Next(100000, 999999).ToString();
+        // DÜZELTME: Güvenli rastgele sayı üretimi (RandomNumberGenerator) ve üst sınır (1000000) düzeltmesi
+        string verificationCode = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
 
         var newUser = new User
         {
@@ -57,8 +60,8 @@ public class AuthController : ControllerBase
         _context.Users.Add(newUser);
         await _context.SaveChangesAsync();
 
-        string mailBody = $"Study Platform'a hos geldiniz! Hesabinizi dogrulamak icin kodunuz: {verificationCode} (Bu kod 15 dakika gecerlidir.)";
-        await _emailService.SendEmailAsync(newUser.Email, "Study Platform - Hesap Dogrulama", mailBody);
+        string mailBody = $"Study Platform'a hoş geldiniz! Hesabınızı doğrulamak için kodunuz: {verificationCode} (Bu kod 15 dakika geçerlidir.)";
+        await _emailService.SendEmailAsync(newUser.Email, "Study Platform - Hesap Doğrulama", mailBody);
 
         return Ok("Hesap oluşturuldu. Aktifleştirmek için e-postanıza gelen kodu girin.");
     }
@@ -143,15 +146,15 @@ public class AuthController : ControllerBase
             return BadRequest("Bu hesap zaten doğrulanmış.");
         }
 
-        var random = new Random();
-        var verificationCode = random.Next(100000, 1000000).ToString();
+        // DÜZELTME: Güvenli rastgele sayı üretimi (RandomNumberGenerator)
+        var verificationCode = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
 
         user.VerificationCode = verificationCode;
         user.VerificationCodeExpiresAt = DateTime.UtcNow.AddMinutes(15);
 
         await _context.SaveChangesAsync();
 
-        string emailBody = $"Study Platform - Yeni dogrulama kodunuz: {verificationCode} (Bu kod 15 dakika boyunca gecerlidir.)";
+        string emailBody = $"Study Platform - Yeni doğrulama kodunuz: {verificationCode} (Bu kod 15 dakika boyunca geçerlidir.)";
 
         await _emailService.SendEmailAsync(
             user.Email,
@@ -167,23 +170,25 @@ public class AuthController : ControllerBase
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
 
+        // DÜZELTME: Kötü niyetli kişilerin e-posta tespiti yapmasını engellemek için genel mesaj dönülüyor
         if (user == null)
         {
-            return NotFound("Bu e-posta adresine ait kayıtlı bir kullanıcı bulunamadı.");
+            return Ok("Eğer bu e-posta adresi sistemimizde kayıtlıysa, şifre sıfırlama kodu gönderilmiştir.");
         }
 
-        var random = new Random();
-        var resetCode = random.Next(100000, 999999).ToString();
+        // DÜZELTME: Güvenli rastgele sayı üretimi (RandomNumberGenerator) ve üst sınır (1000000) düzeltmesi
+        var resetCode = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
 
         user.PasswordResetCode = resetCode;
         user.PasswordResetCodeExpiration = DateTime.UtcNow.AddMinutes(15);
         await _context.SaveChangesAsync();
 
         var subject = "Şifre Sıfırlama Kodu";
-        var body = $"Sifrenizi sifirlamak icin onay kodunuz: {resetCode}";
+        var body = $"Şifrenizi sıfırlamak için onay kodunuz: {resetCode}";
         await _emailService.SendEmailAsync(user.Email, subject, body);
 
-        return Ok("Şifre sıfırlama kodu e-posta adresinize gönderildi.");
+        // DÜZELTME: Yukarıdaki (user == null) durumu ile birebir aynı mesaj veriliyor
+        return Ok("Eğer bu e-posta adresi sistemimizde kayıtlıysa, şifre sıfırlama kodu gönderilmiştir.");
     }
 
     [HttpPost("reset-password")]
@@ -235,11 +240,13 @@ public class AuthController : ControllerBase
 
     private string CreateToken(User user)
     {
-        var claims = new List<Claim>();
+        // DÜZELTME: Claim'ler birbirinden ayrıldı ve Role claim'i eklendi.
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString());
-            new Claim(ClaimTypes.Name, user.Username);
-            new Claim(ClaimTypes.Role, user.RoleId.ToString());
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim("Username", user.Username),               // İsteğe bağlı özel claim
+            new Claim(ClaimTypes.Name, user.Username),          // Standart İsim
+            new Claim(ClaimTypes.Role, user.RoleId.ToString())  // Standart Rol (GetProfile metodu artık bunu bulabilecek)
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
