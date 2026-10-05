@@ -14,7 +14,7 @@ namespace StudyPlatformAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // Çok önemli: Giriş yapmayan kimse pomodoro başlatamaz!
+    [Authorize] 
     public class PomodoroController : ControllerBase
     {
         private readonly IPomodoroService _pomodoroService;
@@ -27,7 +27,6 @@ namespace StudyPlatformAPI.Controllers
         [HttpPost("start")]
         public async Task<IActionResult>Start([FromBody] StartPomodoroDto request)
         {
-            // JWT içinden kullanıcının ID'sini çıkarıyoruz
             var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdString, out int userId))
                 return Unauthorized("Geçersiz kullanıcı kimliği.");

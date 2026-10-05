@@ -1,7 +1,4 @@
-﻿// Entities/KanbanTask.cs
-// Neden yazıyoruz? Günlük görevleri, hedefleri ve yeni eklediğimiz "oyunlaştırma/koçluk" mekaniklerini (Zorluk derecesi ve Günün Patronu) tek bir yerde tutmak için.
-
-using System;
+﻿using System;
 
 namespace StudyPlatformAPI.Entities;
 
@@ -13,7 +10,11 @@ public class KanbanTask
     public User User { get; set; } = null!;
 
     public string Title { get; set; } = string.Empty;
-    public string Status { get; set; } = "Todo";
+
+    // BENİM EKLEDİĞİM: İsteğe bağlı detay/açıklama alanı
+    public string? Description { get; set; }
+
+    public string Status { get; set; } = "Todo"; // "Todo", "InProgress", "Done"
     public string TaskType { get; set; } = "Daily";
     public DateTime TargetDate { get; set; } = DateTime.UtcNow.Date;
 
@@ -21,6 +22,7 @@ public class KanbanTask
     public bool IsReminderSet { get; set; } = false;
     public TimeSpan? ReminderTime { get; set; }
 
+    // Oyunlaştırma
     public int DifficultyWeight { get; set; } = 1;
     public bool IsDailyBoss { get; set; } = false;
 }

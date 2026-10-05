@@ -23,6 +23,8 @@ public class AppDbContext : DbContext
 
     public DbSet<KanbanTask> KanbanTasks { get; set; }
 
+    public DbSet<Flashcard> Flashcards { get; set; }    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -69,5 +71,11 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(k => k.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Flashcard>()
+    .HasOne(f => f.User)
+    .WithMany()
+    .HasForeignKey(f => f.UserId)
+    .OnDelete(DeleteBehavior.Cascade);
     }
 }

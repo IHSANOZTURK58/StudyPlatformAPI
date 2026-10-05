@@ -35,8 +35,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddScoped<IPomodoroService, PomodoroService>();
-
+builder.Services.AddScoped<IKanbanService, KanbanService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddControllers();
 builder.Services.AddSwaggerGen(c =>
+
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "StudyPlatformAPI", Version = "v1" });
 
