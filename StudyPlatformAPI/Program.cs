@@ -3,10 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
+using Minio;
 using StudyPlatformAPI.Data;
 using StudyPlatformAPI.Services;
-using System.Text;
 using StudyPlatformAPI.Services;
+using System.Text;
+using Minio;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +36,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IPomodoroService, PomodoroService>();
 builder.Services.AddScoped<IKanbanService, KanbanService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
@@ -52,6 +55,15 @@ builder.Services.AddSwaggerGen(c =>
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
         Description = "Token'ý buraya yapýþtýrýn."
+    });
+
+    builder.Services.AddSingleton<IMinioClient>(sp =>
+    {
+        var config = sp.GetRequiredService<IConfiguration>();
+        return new MinioClient()
+            .WithEndpoint(config["Minio:Endpoint"])
+            .WithCredentials(config["Minio:AccessKey"], config["Minio:SecretKey"])
+            .Build();
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement

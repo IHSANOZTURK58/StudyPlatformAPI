@@ -44,15 +44,12 @@ namespace StudyPlatformAPI.Services
             session.EndTime = DateTime.UtcNow;
             session.IsCompleted = request.IsCompleted;
 
-            // Eğer pomodoro başarıyla bittiyse (pes edilmediyse) kullanıcıya şimdilik doğrudan XP veriyoruz.
-            // Not: Mimari planımıza göre ilerleyen aşamalarda bu XP verme işlemini API'yi yormamak için RabbitMQ'ya taşıyacağız.
             if (request.IsCompleted)
             {
                 var user = await _context.Users.FindAsync(userId);
                 if (user != null)
                 {
-                    user.TotalXP += 10; // Her başarılı oturum için şimdilik 10 XP
-                    // İleride burada seviye atlama (Level up) mantığı da eklenecek
+                    user.TotalXP += 10; 
                 }
             }
 
