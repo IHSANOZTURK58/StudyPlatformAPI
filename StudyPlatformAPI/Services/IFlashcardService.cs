@@ -6,7 +6,6 @@ namespace StudyPlatformAPI.Services;
 
 public interface IFlashcardService
 {
-    // Ana ekran için (Sadece sayıyı getirir)
     Task<int> GetDueFlashcardsCountAsync(int userId);
 
     // Çalışma ekranı için (Kartların kendisini sınırlı sayıda getirir)
